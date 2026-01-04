@@ -1,29 +1,29 @@
-# Stage 1: Build
-FROM ubuntu:latest AS build
+# Stage 1: Build the application
+FROM eclipse-temurin:23-jdk AS builder
 
-# Instalar dependencias
-RUN apt-get update && apt-get install -y openjdk-17-jdk wget unzip curl git
-
-# Establecer directorio de trabajo
+# Set the working directory
 WORKDIR /app
 
-# Copiar todo el proyecto
+# Copy the application code
 COPY . .
 
-# Dar permisos al wrapper de Gradle
-RUN chmod +x ./gradlew
+# Given permissions to mvnw
+RUN chmod +x mvnw
 
-# Construir el jar de Spring Boot
-RUN ./gradlew bootJar --no-daemon
+# Build the application (requires Maven or Gradle)
+RUN ./mvnw clean package -DskipTests
 
-# Stage 2: Runtime
-FROM openjdk:17-jdk-slim
+# Stage 2: Run the application
+FROM eclipse-temurin:23-jre
 
-# Puerto donde correrá la app
+# Set the working directory
+WORKDIR /app
+
+# Copy the JAR file from the builder stage
+COPY --from=builder /app/target/*.jar app.jar
+
+# Expose the port the app will run on
 EXPOSE 8080
 
-# Copiar jar generado del stage build
-COPY --from=build /app/build/libs/*.jar app.jar
-
-# Comando para ejecutar la app
+# Command to run the application
 ENTRYPOINT ["java", "-jar", "app.jar"]
